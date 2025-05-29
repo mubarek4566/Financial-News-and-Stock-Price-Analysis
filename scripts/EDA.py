@@ -6,6 +6,7 @@ import seaborn as sns
 import string
 import nltk
 from sklearn.feature_extraction.text import CountVectorizer
+from scipy.stats import zscore
 
 from nltk.corpus import stopwords
 
@@ -132,8 +133,8 @@ class EDA:
         # Analyze and visualize spikes in publication frequency over time.
 
         # Convert to datetime
-        df[column] = pd.to_datetime(df[column], errors='coerce')
-        df = df.dropna(subset=[column])
+        self.df[column] = pd.to_datetime(self.df[column], errors='coerce')
+        self.df = self.df.dropna(subset=[column])
 
         # Count articles per day
         daily_counts = self.df.groupby(self.df[column].dt.date).size()
@@ -168,3 +169,110 @@ class EDA:
         plt.ylabel('Number of Articles')
         plt.tight_layout()
         plt.show()
+
+    def identify_publication_spikes(self, date_column='date', threshold_zscore=2.0):
+        # Convert to datetime
+        self.df[date_column] = pd.to_datetime(self.df[date_column], errors='coerce')
+        self.df = self.df.dropna(subset=[date_column])
+
+        # Count articles per day
+        daily_counts = self.df.groupby(self.df[date_column].dt.date).size()
+        daily_counts.index = pd.to_datetime(daily_counts.index)
+        daily_counts = daily_counts.sort_index()
+
+        # Calculate z-score for spike detection
+        zscores = zscore(daily_counts)
+        spike_mask = zscores > threshold_zscore
+
+        # Combine data
+        result = pd.DataFrame({
+            'article_count': daily_counts,
+            'z_score': zscores,
+            'is_spike': spike_mask
+        })
+        print(result)
+
+        # Plot
+        plt.figure(figsize=(15, 6))
+        sns.lineplot(x=daily_counts.index, y=daily_counts.values, label='Daily Article Count', color='steelblue')
+        plt.scatter(daily_counts.index[spike_mask], daily_counts[spike_mask], color='red', label='Spikes', zorder=5)
+        plt.axhline(daily_counts.mean(), linestyle='--', color='gray', label='Average')
+        plt.title("Publication Frequency Over Time with Spikes")
+        plt.xlabel("Date")
+        plt.ylabel("Number of Articles")
+        plt.legend()
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
+
+    def most_active_publishers(self, publisher_col='publisher', top_n=10):
+        
+        # Returns the top N publishers by article count.
+        top_publisher = self.df[publisher_col].value_counts().head(top_n)
+        print(top_publisher)
+
+        # Plot
+        plt.figure(figsize=(10, 6))
+        sns.barplot(y=top_publisher.index, x=top_publisher.values, palette="mako")
+        plt.title(f"Top {top_n} Most Active Publishers")
+        plt.xlabel("Number of Articles")
+        plt.ylabel("Publisher")
+        plt.tight_layout()
+        plt.show()
+
+    def top_keywords_by_publisher(self, publisher_col='publisher', text_col='headline', publisher='Paul Quintaro', top_n=10):
+
+        #Get top keywords for a specific publisher.
+
+        stop_words = set(stopwords.words('english'))
+
+        def clean_text(text):
+            text = text.lower()
+            text = text.translate(str.maketrans('', '', string.punctuation))
+            tokens = text.split()
+            tokens = [t for t in tokens if t not in stop_words]
+            return ' '.join(tokens)
+
+        # Filter and clean
+        pub_df = self.df[self.df[publisher_col] == publisher]
+        clean_headlines = pub_df[text_col].dropna().apply(clean_text)
+
+        # Count keywords
+        vectorizer = CountVectorizer(stop_words='english')
+        X = vectorizer.fit_transform(clean_headlines)
+        sum_words = X.sum(axis=0)
+        keywords = [(word, sum_words[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
+        keywords = sorted(keywords, key=lambda x: x[1], reverse=True)[:top_n]
+
+        # Plot
+        keywords_df = pd.DataFrame(keywords, columns=['Keyword', 'Count'])
+        plt.figure(figsize=(10, 5))
+        sns.barplot(data=keywords_df, x='Count', y='Keyword', color='steelblue')
+        plt.title(f"Top {top_n} Keywords Reported by {publisher}")
+        plt.tight_layout()
+        plt.show()
+
+        return keywords_df
+    
+    def analyze_email_domains(self, publisher_col='publisher', top_n=10):
+       # Extracts domains from email addresses in the publisher column and visualizes the most frequent ones.
+        
+        # Define regex pattern to match email addresses
+        email_pattern = r'[\w\.-]+@([\w\.-]+\.\w+)'
+
+        # Extract domains
+        self.df['email_domain'] = self.df[publisher_col].str.extract(email_pattern)
+
+        # Drop NaNs (non-email publishers)
+        domain_counts = self.df['email_domain'].dropna().value_counts().head(top_n)
+
+        # Plot
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=domain_counts.values, y=domain_counts.index, legend=False)
+        plt.title(f"Top {top_n} Publisher Domains from Emails")
+        plt.xlabel("Number of Articles")
+        plt.ylabel("Email Domain")
+        plt.tight_layout()
+        plt.show()
+
+        return domain_counts
