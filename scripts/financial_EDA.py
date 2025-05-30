@@ -276,3 +276,4 @@ class EDA:
         plt.show()
 
         return domain_counts
+
