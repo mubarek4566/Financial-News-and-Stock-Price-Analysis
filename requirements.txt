@@ -1,0 +1,12 @@
+pandas 
+numpy
+matplotlib.pyplot
+pynance
+seaborn
+scipy
+pyti
+talib
+math
+string
+nltk
+sklearn

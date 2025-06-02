@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import talib
 import math
-from matplotlib.ticker import PercentFormatter
-
 
 class Stock_EDA:
     def __init__(self, path):
@@ -91,33 +89,3 @@ class Stock_EDA:
         plt.tight_layout()
         plt.show()
 
-    def plot_returns_enhanced(self):
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
-        
-        # Daily Returns with positive/negative colors
-        colors = ['red' if x < 0 else 'green' for x in self.df['Daily_Return']]
-        ax1.bar(self.df.index, self.df['Daily_Return'], color=colors, width=1)
-        ax1.axhline(0, color='black', linewidth=0.5)
-        ax1.set_title('Daily Returns (%)', fontsize=12, pad=20)
-        
-        # Cumulative Returns with annotations
-        ax2.plot(self.df.index, self.df['Cumulative_Return'] * 100, 
-                color='navy', linewidth=2.5)
-        
-        # Add final return annotation
-        final_return = self.df['Cumulative_Return'].iloc[-1] * 100
-        ax2.annotate(f'{final_return:.1f}%', 
-                    xy=(self.df.index[-1], final_return),
-                    xytext=(10, 10), textcoords='offset points',
-                    bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5))
-        
-        # Formatting
-        for ax in [ax1, ax2]:
-            ax.grid(True, linestyle=':', alpha=0.7)
-            ax.set_ylabel('Return (%)')
-        ax2.yaxis.set_major_formatter(PercentFormatter())
-        
-        fig.autofmt_xdate(rotation=45)
-        fig.suptitle('Enhanced Returns Analysis', fontsize=16, y=1.02)
-        plt.tight_layout()
-        plt.show()
