@@ -10,3 +10,5 @@ math
 string
 nltk
 sklearn
+textblob
+mplfinance
