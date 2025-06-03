@@ -3,6 +3,7 @@ This repository contains the complete analysis for the Financial News and Stock 
 
 
 ## Installation
+
 Clone the repository.
 Create a virtual environment: python -m venv env
 Activate it: On Windows: env\Scripts\activate On macOS/Linux: source env/bin/activate

@@ -11,4 +11,3 @@ string
 nltk
 sklearn
 textblob
-mplfinance
